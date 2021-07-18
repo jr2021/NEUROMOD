@@ -1,4 +1,4 @@
-from MRGA import MRGA
+from NEUROMOD import NEUROMOD
 import sys
 import pickle
 import datetime

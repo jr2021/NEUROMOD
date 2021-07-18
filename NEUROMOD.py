@@ -4,6 +4,7 @@ from sklearn.svm import *
 from sklearn.neighbors import *
 from sklearn.ensemble import *
 from sklearn.neural_network import *
+from fitness import evaluate_fitness, DatasetObjective
 import sys
 import math
 import json
@@ -24,6 +25,7 @@ class NEUROMOD():
         self.validate = pd.read_csv(validate_file, index_col=0).values
         self.thresh, self.N = float(thresh), int(N)
         self.max_crowding = []
+        self.objectives = [DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc')]
 
 
     def genetic_algorithm(self):
@@ -69,7 +71,8 @@ class NEUROMOD():
     def evaluate(self, population):
 
         for individual in population:
-            pass # FIXME
+            # XXX: where do we store the results of evaluation?
+            individual['meta']['test'] = evaluate_fitness(individual['data'], self.objective)
 
         return population
 
@@ -128,11 +131,10 @@ class NEUROMOD():
 
 
     def crowding_distance_assignment(self, fronts):
-        objectives = [] # FIXME
 
         for front in fronts:
             if len(front) > 0:
-                for objective in objectives:
+                for objective in self.objectives:
                     front = sorted(front, key=lambda individual: individual['meta'][objective])
                     front[0]['meta']['distance'], front[-1]['meta']['distance'] = math.inf, math.inf
                     for i in range(2, len(front) - 1):
