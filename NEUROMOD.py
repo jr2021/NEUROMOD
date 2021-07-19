@@ -1,15 +1,8 @@
 import pandas as pd
 import numpy as np
-from sklearn.svm import *
-from sklearn.neighbors import *
-from sklearn.ensemble import *
-from sklearn.neural_network import *
 from fitness import evaluate_fitness, DatasetObjective
-import sys
 import math
-import json
 import pickle
-import IPython as ipy
 
 class NEUROMOD():
 
@@ -18,14 +11,18 @@ class NEUROMOD():
     children_size = 100
     max_generations = 500
 
-    def __init__(self, train_file, test_file, validate_file, N=50, thresh=1):
+    def __init__(self, train_file, test_file, validate_file, n=50, theta=1):
         self.features = int(features)
         self.train = pd.read_csv(train_file, index_col=0).values
         self.test = pd.read_csv(test_file, index_col=0).values
         self.validate = pd.read_csv(validate_file, index_col=0).values
-        self.thresh, self.N = float(thresh), int(N)
+        self.theta, self.n = float(thresh), int(n)
         self.max_crowding = []
         self.objectives = [DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc')]
+        self.statistics = {'fitness' : {'all': {'test': [], 'validate': [], 'size': []},
+                                        'avg': {'test': [], 'validate': [], 'size': []},
+                                        'min': {'test': [], 'validate': [], 'size': []},
+                                        'max': {'test': [], 'validate': [], 'size': []}}}}
 
 
     def genetic_algorithm(self):
@@ -37,24 +34,26 @@ class NEUROMOD():
             children = self.recombine(parents)
             children = self.mutate(children)
             children = self.evaluate(children)
+
+            self.update_dynamic(np.concatenate((population, children)))
+
             population, fronts = self.nsga_ii(np.concatenate((population, children)), self.population_size)
 
             self.max_crowding.append(np.max([individual['meta']['distance'] for individual in population if individual['meta']['distance'] < math.inf]))
-            self.display_dynamic()
 
             if self.crowding_stagnation(max_crowding, generation):
                 break
 
         self.pareto = fronts[0]
-        self.display_static()
+        self.update_static()
 
     # CLI display
 
     def display_dynamic(self):
-        pass # FIXME
+        pass
 
     def display_static(self):
-        pass # FIXME
+        pass
 
     # population initialization
 
@@ -64,23 +63,18 @@ class NEUROMOD():
                           'dominates': None,
                           'dominated': None,
                           'distance': None},
-                 'data': []} for _ in range(self.population_size)]
+                 'data': []} for _ in range(self.population_size)] # FIXME - how do we initialize individuals?
 
     # fitness evaluation
 
     def evaluate(self, population):
 
         for individual in population:
-            # XXX: where do we store the results of evaluation?
             individual['meta']['test'] = evaluate_fitness(individual['data'], self.objective)
+            individual['meta']['size'] = None # FIXME - what is our first physical constraint?
 
         return population
 
-
-    def accuracy(self, data, test):
-        X_test, y_test = test[:,1:], test[:,0]
-
-        pass # FIXME
 
     # parent/survivor selection
 
@@ -168,7 +162,7 @@ class NEUROMOD():
                  'index': self.index,
                  'data': None}
 
-        # FIXME
+        # FIXME - how do/do we crossover individuals?
 
         return child
 
@@ -177,14 +171,7 @@ class NEUROMOD():
     def mutate(self, children):
 
         for i in range(self.children_size):
-
-            j = np.random.randint(len(self.index))
-
-            if children[i]['data'][j] == 1:
-                if np.sum(children[i]['data']) > 1:
-                    children[i]['data'][j] = 0
-            else:
-                children[i]['data'][j] = 1
+            pass # FIXME - how do we mutate children?
 
         return children
 
@@ -194,3 +181,23 @@ class NEUROMOD():
 
         std = np.array(max_crowding[-self.N:]).std()
         return std < self.thresh and generation > self.N
+
+
+    def update_dynamic(self, population):
+        self.statistics['fitness']['all']['test'].append([individual['meta']['test'] for individual in population])
+        self.statistics['fitness']['all']['validate'].append([individual['meta']['validate'] for individual in population])
+        self.statistics['fitness']['all']['size'].append([individual['meta']['size'] for individual in population])
+
+
+    def update_static(self):
+        self.statistics['fitness']['min']['test'] = [np.min(generation) for generation in self.statistics['fitness']['all']['test']]
+        self.statistics['fitness']['avg']['test'] = [np.mean(generation) for generation in self.statistics['fitness']['all']['test']]
+        self.statistics['fitness']['max']['test'] = [np.max(generation) for generation in self.statistics['fitness']['all']['test']]
+
+        self.statistics['fitness']['min']['validate'] = [np.min(generation) for generation in self.statistics['fitness']['all']['validate']]
+        self.statistics['fitness']['avg']['validate'] = [np.mean(generation) for generation in self.statistics['fitness']['all']['validate']]
+        self.statistics['fitness']['max']['validate'] = [np.max(generation) for generation in self.statistics['fitness']['all']['validate']]
+
+        self.statistics['fitness']['min']['size'] = [np.min(generation) for generation in self.statistics['fitness']['all']['size']]
+        self.statistics['fitness']['avg']['size'] = [np.mean(generation) for generation in self.statistics['fitness']['all']['size']]
+        self.statistics['fitness']['max']['size'] = [np.max(generation) for generation in self.statistics['fitness']['all']['size']]
