@@ -6,9 +6,9 @@ import pickle
 
 class NEUROMOD():
 
-    population_size = 200
-    parents_size = 100
-    children_size = 100
+    population_size = 20
+    parents_size = 10
+    children_size = 10
     max_generations = 500
 
     def __init__(self, n=50, theta=1):
@@ -68,12 +68,13 @@ class NEUROMOD():
 
     def evaluate(self, population):
 
-        for individual in population:
+        for individual_number, individual in enumerate(population):
             individual['meta']['acc'] = np.random.randn()
             individual['meta']['phys'] = np.random.randn()
             individual['meta']['val'] = np.random.randn()
 
-            # individual['meta']['acc'] = evaluate_fitness(individual['data'], self.objectives['acc'])
+            print('Individual:', individual_number)
+            individual['meta']['acc'] = evaluate_fitness(individual['data'], self.objectives['acc'])
             # individual['meta']['phys'] = evaluate_phys(individual['data'], self.objectives['phys']) # FIXME - what is our first physical constraint?
 
         return population

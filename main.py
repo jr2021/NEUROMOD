@@ -9,4 +9,5 @@ def main():
     with open(str(datetime.datetime.now().strftime("%y%m%d_%H%M%S%f")) + '.pkl', 'wb') as file:
         pickle.dump(instance, file)
 
-main()
+if __name__ == "__main__":
+    main()
