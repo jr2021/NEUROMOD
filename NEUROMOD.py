@@ -73,7 +73,7 @@ class NEUROMOD():
             individual['meta']['phys'] = np.random.randn()
             individual['meta']['val'] = np.random.randn()
 
-            print('Individual:', individual_number)
+            # print('Individual:', individual_number)
             individual['meta']['acc'] = evaluate_fitness(individual['data'], self.objectives['acc'])
             # individual['meta']['phys'] = evaluate_phys(individual['data'], self.objectives['phys']) # FIXME - what is our first physical constraint?
 

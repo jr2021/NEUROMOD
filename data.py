@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 def _MNIST(transform):
     data = torchvision.datasets.MNIST(root='./data', train=True,
                                             download=True, transform=transform)
-    train_set, val_set = torch.utils.data.random_split(data, [50000, 10000])
+    train_set, val_set = torch.utils.data.random_split(data, [59800, 200])
 
     test_set = torchvision.datasets.MNIST(root='./data', train=False,
                                         download=True, transform=transform)
