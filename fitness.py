@@ -48,6 +48,37 @@ class Objective:
     def __init__(self):
         super().__init__()
 
+class NetworkCostObjective(Objective):
+    """
+    Class for evaluating fitness by cost to build the network.
+    """    
+    def __init__(self, cost_metric):
+        super().__init__()
+        self.cost_metric = cost_metric
+
+    def __repr__(self):
+        return 'NetworkCostObjective:' + str(self.cost_metric)
+
+    def __call__(self, genome):
+        if self.cost_metric == "count":
+            return count_connections(genome)
+        elif self.cost_metric == "l1":
+            return l1_norm(genome)
+        elif self.cost_metric == "l2":
+            return l2_norm(genome)
+        else:
+            raise Exception("Unknown network cost metric: ", self.cost_metric)
+
+def count_connections(genome):
+    return np.sum([np.count_nonzero(g) for g in genome])
+
+def l1_norm(genome):
+    return np.sum([np.sum(np.abs(g)) for g in genome])
+
+
+def l2_norm(genome):
+    return np.sum([np.sum(np.square(g)) for g in genome])
+
 class DatasetObjective(Objective):
     """
     Class for evaluating fitness by performance on a dataset.
@@ -64,9 +95,13 @@ class DatasetObjective(Objective):
         
         if evaluation_metric == 'acc':
             self.metric = Accuracy()
-    
+
+    def __repr__(self):
+        return 'DatasetObjective:' + str(self.dataset_name) + ', ' + str(self.metric)
+
     def __call__(self, model):
-        return evaluate_on_dataset([model], self.dataloader, [self.metric])
+        # We can support evaluating multiple models at the same time in the future
+        return evaluate_on_dataset([model], self.dataloader, [self.metric])[0][0]
 
 
 class FCNet(nn.Module):
@@ -137,13 +172,20 @@ def evaluate_fitness(genome, objective):
     if len(genome) % 2 != 0:
         raise Exception("Genome format must be [weight matrix, bias vector, weight matrix, bias vector, ...]")
 
-    net = FCNet(get_network_shape(genome))
-    
-    sd = net.state_dict()
-    
-    for i in range(len(net.linears)):
-        sd[f'linears.{i}.weight'] = torch.tensor(genome[2*i].T)
-        sd[f'linears.{i}.bias'] = torch.tensor(genome[2*i+1])
-    
-    net.load_state_dict(sd)
-    return objective(net)
+    if isinstance(objective, NetworkCostObjective):
+        return objective(genome)
+
+    elif isinstance(objective, DatasetObjective):
+        # build the network and run it on the dataset
+        net = FCNet(get_network_shape(genome))
+        
+        sd = net.state_dict()
+        
+        for i in range(len(net.linears)):
+            sd[f'linears.{i}.weight'] = torch.tensor(genome[2*i].T)
+            sd[f'linears.{i}.bias'] = torch.tensor(genome[2*i+1])
+        
+        net.load_state_dict(sd)
+        return objective(net)
+    else:
+        raise Exception("Unknown objective type:", objective)
