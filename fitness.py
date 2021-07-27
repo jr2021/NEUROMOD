@@ -5,9 +5,8 @@ import numpy as np
 from data import load_data
 
 def getdev():
-    return 'cpu'
-#     dev = 'cuda' if torch.cuda.is_available() else 'cpu'
-#     return dev
+    dev = 'cuda' if torch.cuda.is_available() else 'cpu'
+    return dev
 
 class Accuracy:
     """Returns count of correct classes.
@@ -177,7 +176,8 @@ def evaluate_fitness(genome, objective):
 
     elif isinstance(objective, DatasetObjective):
         # build the network and run it on the dataset
-        net = FCNet(get_network_shape(genome))
+        dev = getdev()
+        net = FCNet(get_network_shape(genome)).to(dev)
         
         sd = net.state_dict()
         
