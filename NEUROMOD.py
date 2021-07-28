@@ -6,13 +6,10 @@ import pickle
 
 class NEUROMOD():
 
-    population_size = 20
-    parents_size = 10
-    children_size = 10
-    max_generations = 500
-
-    def __init__(self, n=50, theta=1):
+    def __init__(self, n=50, theta=1, population_size = 20, parents_size = 10, children_size = 10, max_generations = 500):
         self.theta, self.n = float(theta), int(n)
+        self.population_size, self.parents_size, self.children_size, self.max_generations = int(population_size), int(parents_size), int(children_size), int(max_generations)
+        
         self.objectives = {'acc': DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc'),
                            'phys': None}
         self.statistics = {'fitness' : {'all': {'acc': [], 'val': [], 'phys': []},
