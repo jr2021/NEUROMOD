@@ -1,17 +1,20 @@
 import pandas as pd
 import numpy as np
-from fitness import evaluate_fitness, DatasetObjective
+from fitness import evaluate_fitness, DatasetObjective, NetworkCostObjective
 import math
 import pickle
 
 class NEUROMOD():
 
-    def __init__(self, n=50, theta=1, population_size = 20, parents_size = 10, children_size = 10, max_generations = 500):
+    def __init__(self, n=50, theta=1, population_size=20, parents_size=10, children_size=10, max_generations=500, data='MNIST', phys='l1', individual_mutation=0.5, layerwise_mutation=0.5):
         self.theta, self.n = float(theta), int(n)
         self.population_size, self.parents_size, self.children_size, self.max_generations = int(population_size), int(parents_size), int(children_size), int(max_generations)
-        
+        self.individual_mutation, self.layerwise_mutation = int(individual_mutation), int(layerwise_mutation)
+
         self.objectives = {'acc': DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc'),
-                           'phys': None}
+                           'phys': {'count': NetworkCostObjective(cost_metric = 'count'),
+                                    'l1': NetworkCostObjective(cost_metric = 'l1'),
+                                    'l2': NetworkCostObjective(cost_metric = 'l2')}[phys]}
         self.statistics = {'fitness' : {'all': {'acc': [], 'val': [], 'phys': []},
                                         'avg': {'acc': [], 'val': [], 'phys': []},
                                         'min': {'acc': [], 'val': [], 'phys': []},
@@ -55,7 +58,8 @@ class NEUROMOD():
 
     def initialize(self):
         return [{'meta': {'acc': None,
-                          'val': None,
+                          'val': 0,
+                          'phys': None,
                           'dominates': None,
                           'dominated': None,
                           'distance': None},
@@ -66,13 +70,11 @@ class NEUROMOD():
     def evaluate(self, population):
 
         for individual_number, individual in enumerate(population):
-            individual['meta']['acc'] = np.random.randn()
-            individual['meta']['phys'] = np.random.randn()
-            individual['meta']['val'] = np.random.randn()
 
-            # print('Individual:', individual_number)
+            print('evaluating individual ', individual_number)
+
             individual['meta']['acc'] = evaluate_fitness(individual['data'], self.objectives['acc'])
-            # individual['meta']['phys'] = evaluate_phys(individual['data'], self.objectives['phys']) # FIXME - what is our first physical constraint?
+            individual['meta']['phys'] = evaluate_fitness(individual['data'], self.objectives['phys'])
 
         return population
 
@@ -156,7 +158,7 @@ class NEUROMOD():
 
     def one_point(self, mother, father):
         child = {'meta': {'acc': None,
-                          'val': None,
+                          'val': 0,
                           'phys': None,
                           'dominates': None,
                           'dominated': None,
@@ -167,11 +169,17 @@ class NEUROMOD():
 
     # mutation
 
-    def mutate(self, population):
-        children = []
+    def mutate(self, children):
 
         for i in range(self.children_size):
-            children.append(population[i])
+            if np.random.uniform() > self.individual_mutation:
+                for j in range(len(children[i]['data'])):
+                    if np.random.uniform() > self.layerwise_mutation:
+                        layer = np.hstack(children[i]['data'][j])
+                        n = np.random.randint(layer.size-1)
+                        index = np.random.randint(layer.size, size=n)
+                        layer[index] = np.random.randn(n)
+                        children[i]['data'][j] = layer.reshape(children[i]['data'][j].shape)
 
         return children
 
