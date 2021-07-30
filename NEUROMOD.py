@@ -10,6 +10,7 @@ class NEUROMOD():
         self.theta, self.n = float(theta), int(n)
         self.population_size, self.parents_size, self.children_size, self.max_generations = int(population_size), int(parents_size), int(children_size), int(max_generations)
         self.individual_mutation, self.layerwise_mutation = float(individual_mutation), float(layerwise_mutation)
+        self.weight_sizes = [(28*28, 100), (100,), (100, 10), (10,)]
 
         self.objectives = {'acc': DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc'),
                            'phys': {'count': NetworkCostObjective(cost_metric = 'count'),
@@ -24,9 +25,12 @@ class NEUROMOD():
 
     def genetic_algorithm(self):
 
+        print('Starting evolution with objectives:', self.objectives)
+
         population = self.initialize()
         population = self.evaluate(population)
         for generation in range(self.max_generations):
+            print(f'Generation {generation+1}/{self.max_generations}')
             parents, fronts = self.nsga_ii(population, self.parents_size)
             children = self.recombine(parents)
             children = self.mutate(children)
@@ -49,12 +53,23 @@ class NEUROMOD():
     # CLI display
 
     def display_dynamic(self):
-        print(self.statistics['pareto']['crowd']['std'][-1:])
+        print('std:', self.statistics['pareto']['crowd']['std'][-1:])
+        print('mean acc:', np.mean(self.statistics['fitness']['all']['acc']), 'mean network cost:', np.mean(self.statistics['fitness']['all']['phys']))
 
     def display_static(self):
-        print(self.statistics['fitness']['avg']['acc'][-1:], self.statistics['fitness']['avg']['phys'][-1:])
+        print('mean acc:', self.statistics['fitness']['avg']['acc'][-1:], 'mean network cost:', self.statistics['fitness']['avg']['phys'][-1:])
 
     # population initialization
+    def init_genome(self, sizes, p = 0.5):
+        """
+        Initalizes the weights using randn, with probability p of being 0
+        
+        Input
+        sizes: list of size tuples
+        
+        Returns: list of numpy arrays (to become PyTorch tensors)
+        """
+        return [np.random.randn(*s) * np.random.binomial(n=1, p=p, size = s) for s in sizes]
 
     def initialize(self):
         return [{'meta': {'acc': None,
@@ -63,16 +78,13 @@ class NEUROMOD():
                           'dominates': None,
                           'dominated': None,
                           'distance': None},
-                 'data': [np.random.randn(28*28, 100), np.random.randn(100), np.random.randn(100, 10), np.random.randn(10)]} for _ in range(self.population_size)]
+                 'data': self.init_genome(self.weight_sizes)} for _ in range(self.population_size)]
 
     # fitness evaluation
 
     def evaluate(self, population):
 
         for individual_number, individual in enumerate(population):
-
-            print('evaluating individual ', individual_number)
-
             individual['meta']['acc'] = evaluate_fitness(individual['data'], self.objectives['acc'])
             individual['meta']['phys'] = evaluate_fitness(individual['data'], self.objectives['phys'])
 
