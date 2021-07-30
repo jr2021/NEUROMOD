@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 from fitness import evaluate_fitness, DatasetObjective, NetworkCostObjective
 import math
-import pickle
+import time
+import warnings
+warnings.filterwarnings('ignore', message = 'The given NumPy array is not writeable')
 
 class NEUROMOD():
 
@@ -25,12 +27,13 @@ class NEUROMOD():
 
     def genetic_algorithm(self):
 
-        print('Starting evolution with objectives:', self.objectives)
+        print('Starting evolution with objectives:', list(self.objectives.values()))
+        start = time.time()
 
         population = self.initialize()
         population = self.evaluate(population)
         for generation in range(self.max_generations):
-            print(f'Generation {generation+1}/{self.max_generations}')
+            print(f'Generation {generation+1}/{self.max_generations} | Elapsed time: {time.time() - start:.2f}')
             parents, fronts = self.nsga_ii(population, self.parents_size)
             children = self.recombine(parents)
             children = self.mutate(children)
@@ -42,7 +45,7 @@ class NEUROMOD():
             population, fronts = self.nsga_ii(np.concatenate((population, children)), self.population_size)
 
             self.statistics['pareto']['crowd']['max'].append(np.max([individual['meta']['distance'] for individual in population if individual['meta']['distance'] < math.inf]))
-
+            
             if self.crowding_stagnation(generation):
                 break
 
@@ -190,7 +193,7 @@ class NEUROMOD():
                         layer = np.hstack(children[i]['data'][j])
                         n = np.random.randint(layer.size-1)
                         index = np.random.randint(layer.size, size=n)
-                        layer[index] = np.random.randn(n)
+                        layer[index] = np.random.randn(n) * np.random.binomial(1, p=0.5, size=n)
                         children[i]['data'][j] = layer.reshape(children[i]['data'][j].shape)
 
         return children

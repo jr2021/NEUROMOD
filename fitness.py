@@ -96,7 +96,7 @@ class DatasetObjective(Objective):
             self.metric = Accuracy()
 
     def __repr__(self):
-        return 'DatasetObjective:' + str(self.dataset_name) + ', ' + str(self.metric)
+        return 'DatasetObjective: (' + str(self.dataset_name) + ', ' + str(self.metric) + ')'
 
     def __call__(self, model):
         # We can support evaluating multiple models at the same time in the future
