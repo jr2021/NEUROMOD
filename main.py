@@ -18,8 +18,8 @@ def main():
     parser.add_argument("--max_generations", type=int, help="max generations", default=500)
     parser.add_argument("--data", "-d", type=str, help="dataset", default='MNIST')
     parser.add_argument("--phys", "-p", type=str, help="physical constraint", default='count')
-    parser.add_argument("--individual_mutation", type=int, help="individual mutation rate", default=0.5)
-    parser.add_argument("--layerwise_mutation", type=int, help="layer-wise mutation rate", default=0.5)
+    parser.add_argument("--individual_mutation", type=float, help="individual mutation rate", default=0.5)
+    parser.add_argument("--layerwise_mutation", type=float, help="layer-wise mutation rate", default=0.5)
     args = parser.parse_args()
 
 
