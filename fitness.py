@@ -11,12 +11,12 @@ def getdev():
 class Accuracy:
     """Returns count of correct classes.
     
-    Input:
-    model_output: tensor of shape [batch size, number of classes], with predicted probability of each class
-    target: tensor of shape [batch size], with ground truth class label (index value of the correct class)
+    Args:
+        model_output: tensor of shape [batch size, number of classes], with predicted probability of each class
+        target: tensor of shape [batch size], with ground truth class label (index value of the correct class)
     
     Returns:
-    torch.Tensor scalar value, with accuracy for the batch
+        torch.Tensor scalar value, with accuracy for the batch
     """
     
     def __init__(self, reduction = None):
@@ -83,20 +83,21 @@ class DatasetObjective(Objective):
     Class for evaluating fitness by performance on a dataset.
     """
     
-    def __init__(self, dataset_name, evaluation_metric):
+    def __init__(self, dataset_name, evaluation_metric, dataset_params):
         super().__init__()
         
         self.dataset_name = dataset_name
+        self.dataset_params = dataset_params
         
         if dataset_name == 'MNIST':
-            train_loader, val_loader, test_loader, input_size = load_data('MNIST', {'batch_size':200})
-            self.dataloader = val_loader
+            train_loader, val_loader, test_loader, input_size = load_data('MNIST', dataset_params)
+            self.dataloader = train_loader
         
         if evaluation_metric == 'acc':
             self.metric = Accuracy()
 
     def __repr__(self):
-        return 'DatasetObjective: (' + str(self.dataset_name) + ', ' + str(self.metric) + ')'
+        return 'DatasetObjective: (' + str(self.dataset_name) + ', ' + str(self.metric) + ') with params:' + str(self.dataset_params)
 
     def __call__(self, model):
         # We can support evaluating multiple models at the same time in the future
@@ -128,14 +129,14 @@ class FCNet(nn.Module):
 def evaluate_on_dataset(evaluation_models, dataloader, metrics, dev = None):
     """Evaluates models on metrics, using the data provided.
     
-    Input:
-    evaluation_model: list of Pytorch models to evaluate
-    dataloader: Pytorch dataloader containing the testing set to use
-    metrics: list of metrics to test on
-    dev: hardware device to use
+    Args:
+        evaluation_model: list of Pytorch models to evaluate
+        dataloader: Pytorch dataloader containing the testing set to use
+        metrics: list of metrics to test on
+        dev: hardware device to use
     
     Returns:
-    tensor containing evaluation for each model for each metric.
+        tensor containing evaluation for each model for each metric.
     """
     if dev is None:
         dev = getdev()

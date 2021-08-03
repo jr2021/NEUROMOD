@@ -7,14 +7,42 @@ import warnings
 warnings.filterwarnings('ignore', message = 'The given NumPy array is not writeable')
 
 class NEUROMOD():
+    """Summary of class here.
 
-    def __init__(self, n=50, theta=1, population_size=20, parents_size=10, children_size=10, max_generations=500, data='MNIST', phys='l1', individual_mutation=0.5, layerwise_mutation=0.5):
+    Longer class information....
+    Longer class information....
+
+    Attributes:
+        theta: stop condition parameter, threshold for std of crowding
+        n: stop condition parameter, number of generations to look back
+        population_size: number of individuals in the population
+        parents_size:
+        children: 
+        max_generations: maximum number of generations to run
+        individual_mutation: float between 0 and 1, probability of mutating an individual
+        layerwise_mutation: float between 0 and 1, probability of mutating a specific layer
+        density: float between 0 and 1, probability of a given weight being nonzero; otherwise will be set to zero. Directly affects sparsity of network
+        
+        dataset_params: a dict with parameters used for the dataset objective containing the following parameters:
+            train_set_size: size of the training set to use. Cannot be more than the size of the dataset
+            batch_size: batch size for the PyTorch evaluator. Must be less than the size of the training set
+        
+        objectives:
+
+        statistics:
+
+        pareto:
+
+    """
+
+    def __init__(self, n=50, theta=1, population_size=20, parents_size=10, children_size=10, max_generations=500, data='MNIST', train_set_size = 200, batch_size = 200, phys='l1', individual_mutation=0.5, layerwise_mutation=0.5, density=0.7):
         self.theta, self.n = float(theta), int(n)
         self.population_size, self.parents_size, self.children_size, self.max_generations = int(population_size), int(parents_size), int(children_size), int(max_generations)
-        self.individual_mutation, self.layerwise_mutation = float(individual_mutation), float(layerwise_mutation)
+        self.individual_mutation, self.layerwise_mutation, self.density = float(individual_mutation), float(layerwise_mutation), float(density)
         self.weight_sizes = [(28*28, 100), (100,), (100, 10), (10,)]
 
-        self.objectives = {'acc': DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc'),
+        self.dataset_params = {'batch_size': int(batch_size), 'train_set_size': int(train_set_size)}
+        self.objectives = {'acc': DatasetObjective(dataset_name = 'MNIST', evaluation_metric = 'acc', dataset_params = self.dataset_params),
                            'phys': {'count': NetworkCostObjective(cost_metric = 'count'),
                                     'l1': NetworkCostObjective(cost_metric = 'l1'),
                                     'l2': NetworkCostObjective(cost_metric = 'l2')}[phys]}
@@ -24,6 +52,7 @@ class NEUROMOD():
                                         'max': {'acc': [], 'val': [], 'phys': []}},
                            'pareto': {'crowd': {'max': [], 'std': []}}}
 
+        self.pareto = []
 
     def genetic_algorithm(self):
 
@@ -67,10 +96,11 @@ class NEUROMOD():
         """
         Initalizes the weights using randn, with probability p of being 0
         
-        Input
-        sizes: list of size tuples
+        Args
+            sizes: list of size tuples
         
-        Returns: list of numpy arrays (to become PyTorch tensors)
+        Returns:
+            list of numpy arrays (to become PyTorch tensors)
         """
         return [np.random.randn(*s) * np.random.binomial(n=1, p=p, size = s) for s in sizes]
 
@@ -81,7 +111,7 @@ class NEUROMOD():
                           'dominates': None,
                           'dominated': None,
                           'distance': None},
-                 'data': self.init_genome(self.weight_sizes)} for _ in range(self.population_size)]
+                 'data': self.init_genome(sizes = self.weight_sizes, p = self.density)} for _ in range(self.population_size)]
 
     # fitness evaluation
 
@@ -187,13 +217,13 @@ class NEUROMOD():
     def mutate(self, children):
 
         for i in range(self.children_size):
-            if np.random.uniform() > self.individual_mutation:
+            if np.random.uniform() > self.individual_mutation: # mutate individual at all?
                 for j in range(len(children[i]['data'])):
-                    if np.random.uniform() > self.layerwise_mutation:
+                    if np.random.uniform() > self.layerwise_mutation: # mutate this layer?
                         layer = np.hstack(children[i]['data'][j])
                         n = np.random.randint(layer.size-1)
                         index = np.random.randint(layer.size, size=n)
-                        layer[index] = np.random.randn(n) * np.random.binomial(1, p=0.5, size=n)
+                        layer[index] = (layer[index] + np.random.randn(n)) * np.random.binomial(1, p=self.density, size=n)
                         children[i]['data'][j] = layer.reshape(children[i]['data'][j].shape)
 
         return children
